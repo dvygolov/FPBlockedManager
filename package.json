@@ -1,0 +1,19 @@
+{
+  "name": "fpblockedmanager",
+  "version": "200526b1",
+  "private": true,
+  "description": "Browser-side Facebook Page blocked users export and import tooling.",
+  "scripts": {
+    "check": "node --check fpblocked-og-packager.js && node --check fpblocked-manager.js && node --check fpblocked-loader.js",
+    "build": "node fpblocked-og-packager.js --base-url=https://fpblockedmanager.pages.dev/fpblocked",
+    "deploy": "npx wrangler pages deploy ./dist --project-name=fpblockedmanager --branch=main --commit-dirty=true"
+  },
+  "keywords": [
+    "facebook",
+    "bookmarklet",
+    "yellow-web"
+  ],
+  "author": "Yellow Web",
+  "license": "UNLICENSED",
+  "devDependencies": {}
+}
