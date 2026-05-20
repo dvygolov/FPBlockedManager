@@ -51,8 +51,12 @@ function buildAppMarkSvg() {
     '    </linearGradient>',
     '  </defs>',
     '  <rect x="4" y="4" width="88" height="88" rx="22" fill="#151515" stroke="url(#fpblocked-gold)" stroke-width="6"/>',
-    '  <text x="48" y="61" text-anchor="middle" font-family="Trebuchet MS, Verdana, sans-serif" font-size="34" font-weight="900" letter-spacing="-3" fill="url(#fpblocked-gold)">RM</text>',
-  '</svg>',
+    '  <path d="M48 20 72 29v17c0 16-9.8 26.6-24 32-14.2-5.4-24-16-24-32V29Z" fill="#222" stroke="#fff2bd" stroke-width="4" stroke-linejoin="round"/>',
+    '  <circle cx="48" cy="48" r="16" fill="none" stroke="url(#fpblocked-gold)" stroke-width="7"/>',
+    '  <path d="m37 59 22-22" stroke="#ffd000" stroke-width="7" stroke-linecap="round"/>',
+    '  <circle cx="48" cy="39" r="5" fill="#fff2bd"/>',
+    '  <path d="M37 61c2.6-7 19.4-7 22 0" fill="none" stroke="#fff2bd" stroke-width="4" stroke-linecap="round"/>',
+    '</svg>',
   ].join("\n");
 }
 
@@ -128,8 +132,8 @@ function buildManifestHtml({ appName, build, manifestBase64 }) {
   ].join("\n");
 }
 
-function buildLandingHtml({ appName, build, bookmarklet, manifestUrl, screenshotUrl, iconUrl }) {
-  const title = `${appName} Loader`;
+function buildLandingHtml({ appName, displayName = appName, build, bookmarklet, manifestUrl, screenshotUrl, iconUrl }) {
+  const title = `${displayName} Loader`;
   const inlineMark = buildAppMarkSvg();
   return [
     "<!doctype html>",
@@ -139,7 +143,7 @@ function buildLandingHtml({ appName, build, bookmarklet, manifestUrl, screenshot
     '  <meta name="viewport" content="width=device-width, initial-scale=1" />',
     `  <title>${escapeHtml(title)}</title>`,
     '  <meta name="robots" content="noindex,nofollow" />',
-    `  <meta name="description" content="${escapeHtml(appName)} bookmarklet loader for Facebook Page blocked-user export and import." />`,
+    `  <meta name="description" content="${escapeHtml(displayName)} bookmarklet loader for Facebook Page blocked-user export and import." />`,
     `  <link rel="icon" href="${escapeHtml(iconUrl)}" type="image/svg+xml" />`,
     "  <style>",
     "    :root {",
@@ -372,7 +376,7 @@ function buildLandingHtml({ appName, build, bookmarklet, manifestUrl, screenshot
     "  <main>",
     "    <nav class=\"nav\">",
     "      <div class=\"brand-wrap\">",
-    `        <div class="brand-line"><span class="brand-mark">${inlineMark}</span><div class="brand">${escapeHtml(appName)}</div></div>`,
+    `        <div class="brand-line"><span class="brand-mark">${inlineMark}</span><div class="brand">${escapeHtml(displayName)}</div></div>`,
     "        <div class=\"byline\">by <a href=\"https://yellowweb.top\" target=\"_blank\" rel=\"noopener\">Yellow Web</a></div>",
     "      </div>",
     "      <div class=\"nav-links\"><a href=\"#install\">Install</a><a href=\"#features\">Features</a><a href=\"#how\">How it works</a><a class=\"tg-link\" href=\"https://t.me/yellow_web\" target=\"_blank\" rel=\"noopener\" aria-label=\"Yellow Web Telegram\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M21.8 4.6 18.6 19.7c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6 13.2 1.1 11.7c-1.1-.3-1.1-1.1.2-1.6L20.5 2.7c.9-.3 1.7.2 1.3 1.9Z\"/></svg></a></div>",
@@ -380,7 +384,7 @@ function buildLandingHtml({ appName, build, bookmarklet, manifestUrl, screenshot
     "    <section class=\"hero\" id=\"install\">",
     "      <div class=\"hero-grid\">",
     "        <div>",
-    `          <div class="eyebrow">${escapeHtml(appName)} build ${escapeHtml(build)}</div>`,
+    `          <div class="eyebrow">${escapeHtml(displayName)} build ${escapeHtml(build)}</div>`,
     "          <h1>Facebook Page blocked users in one bookmarklet.</h1>",
     "          <p class=\"lead\">FPBlockedManager is a browser-side tool for exporting blocked users from a Facebook Page, importing the same block list into another page, and quickly blocking or unblocking a specific user ID.</p>",
     "          <div class=\"install\">",
@@ -456,6 +460,7 @@ function main() {
   const distRoot = path.dirname(outRoot);
   const baseUrl = readArg("base-url", "");
   const appName = readArg("app", "FPBlockedManager");
+  const displayName = "FP Blocked Manager";
   const chunkOgObjectIds = parseListArg("chunk-og-object-ids");
   const source = fs.readFileSync(sourcePath, "utf8");
   const build = readArg("build", detectBuild(source));
@@ -550,6 +555,7 @@ function main() {
   writeFile(path.join(distRoot, APP_MARK_FILE), `${buildAppMarkSvg()}\n`);
   writeFile(path.join(distRoot, "index.html"), buildLandingHtml({
     appName,
+    displayName,
     build,
     bookmarklet,
     manifestUrl: publicUrl("latest/manifest.html"),
