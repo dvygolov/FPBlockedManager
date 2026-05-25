@@ -1,30 +1,30 @@
 {
   "app": "FPBlockedManager",
-  "build": "200526b1",
-  "version": "200526b1",
-  "generatedAt": "2026-05-20T20:07:53.721Z",
+  "build": "250526b1",
+  "version": "250526b1",
+  "generatedAt": "2026-05-25T10:30:57.701Z",
   "payload": {
     "encoding": "base64",
-    "sha256": "fbbd1c2d40a906347de69c88fcbc1d6bca5ab0bb69435971026f2eee44c6d40b",
-    "byteLength": 13734
+    "sha256": "58b41d1b75bc1862b54b48ba0e6c43a609ccd41f665fe6f64f907d78ccd8bcde",
+    "byteLength": 16744
   },
   "chunks": [
     {
       "index": 1,
       "file": "og/chunk-001.html",
-      "url": "https://fpblockedmanager.pages.dev/fpblocked/200526b1/og/chunk-001.html",
+      "url": "https://fpblockedmanager.pages.dev/fpblocked/250526b1/og/chunk-001.html",
       "latestUrl": "https://fpblockedmanager.pages.dev/fpblocked/latest/og/chunk-001.html",
       "ogObjectId": "",
-      "base64Length": 18312,
-      "base64Sha256": "42af447a78ae9983aab2582a956292b4e62d5c2e9f57edba706ef50e61879da2"
+      "base64Length": 22328,
+      "base64Sha256": "e02aef5f624cc2e6564468622d662f754270ef0b8cc1065beb8941ec716598af"
     }
   ],
   "source": "fpblocked-manager.js",
   "chunkSize": 350000,
   "payloadFile": "payload.js",
-  "payloadUrl": "https://fpblockedmanager.pages.dev/fpblocked/200526b1/payload.js",
+  "payloadUrl": "https://fpblockedmanager.pages.dev/fpblocked/250526b1/payload.js",
   "latestPayloadUrl": "https://fpblockedmanager.pages.dev/fpblocked/latest/payload.js",
   "manifestFile": "manifest.html",
-  "manifestUrl": "https://fpblockedmanager.pages.dev/fpblocked/200526b1/manifest.html",
+  "manifestUrl": "https://fpblockedmanager.pages.dev/fpblocked/250526b1/manifest.html",
   "latestManifestUrl": "https://fpblockedmanager.pages.dev/fpblocked/latest/manifest.html"
 }

@@ -2,11 +2,14 @@
   "use strict";
 
   const Config = {
-    VERSION: "200526b1",
+    VERSION: "250526b1",
     APP: "FPBlockedManager",
     API_URL: "https://graph.facebook.com/v23.0/",
     CACHE_KEY: "fpblockedmanager.lastPackage.v1",
   };
+  const APP_ID = "ywbFPBlockedManager";
+  const APP_TITLE = "FP Blocked Manager";
+  const APP_MARK_SVG = `<svg class="ywb-mark" viewBox="0 0 96 96" aria-hidden="true"><defs><linearGradient id="${APP_ID}-gold" x1="0%" x2="100%" y1="0%" y2="100%"><stop offset="0%" stop-color="#ffe16a"/><stop offset="55%" stop-color="#ffd000"/><stop offset="100%" stop-color="#ffab00"/></linearGradient></defs><rect x="4" y="4" width="88" height="88" rx="22" fill="#151515" stroke="url(#${APP_ID}-gold)" stroke-width="6"/><circle cx="40" cy="36" r="13" fill="#222" stroke="#fff2bd" stroke-width="4"/><path d="M22 72c4-15 14-22 30-22s26 7 30 22" fill="none" stroke="url(#${APP_ID}-gold)" stroke-width="7" stroke-linecap="round"/><path d="M66 27 78 39M78 27 66 39" stroke="url(#${APP_ID}-gold)" stroke-width="7" stroke-linecap="round"/></svg>`;
 
   if (window.__FPBlockedManagerPayloadBuild === Config.VERSION && typeof window.showFPBlockedManager === "function") {
     window.showFPBlockedManager();
@@ -32,6 +35,15 @@
 
   function tokenInput() {
     return document.querySelector("#ywbFPBlockedToken")?.value.trim() || runtimeToken();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
   }
 
   function log(message, type = "info") {
@@ -217,7 +229,7 @@
     const select = document.querySelector("#ywbFPBlockedPage");
     if (!select) return;
     select.innerHTML = `<option value="">Select fetched page</option>` + state.pages
-      .map((page) => `<option value="${page.id}">${page.name} (${page.id})</option>`)
+      .map((page) => `<option value="${escapeHtml(page.id)}">${escapeHtml(page.name)} (${escapeHtml(page.id)})</option>`)
       .join("");
   }
 
@@ -227,32 +239,54 @@
     root.id = "ywbFPBlockedManager";
     root.innerHTML = `
       <style>
-        #ywbFPBlockedManager{position:fixed;inset:24px 24px auto auto;width:min(600px,calc(100vw - 32px));max-height:calc(100vh - 48px);z-index:2147483647;background:#181818;color:#f8f0c8;border:2px solid #ffd000;border-radius:8px;box-shadow:0 24px 80px #0009;font:14px/1.45 Verdana,sans-serif;overflow:hidden}
-        #ywbFPBlockedManager *{box-sizing:border-box}.ywb-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#ffd000;color:#111;font-weight:900}.ywb-close{border:0;background:#111;color:#ffd000;width:30px;height:30px;border-radius:6px;font-weight:900;cursor:pointer}
-        .ywb-body{padding:14px 16px;display:grid;gap:12px;overflow:auto;max-height:calc(100vh - 112px)}.ywb-field{display:grid;gap:5px}.ywb-field span{color:#b9b09a;font-size:12px}.ywb-field input,.ywb-field select{width:100%;border:1px solid #504714;border-radius:6px;background:#111;color:#f8f0c8;padding:10px}.ywb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-        .ywb-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.ywb-row button,.ywb-file{border:1px solid #ffd000;background:#282300;color:#ffd000;border-radius:6px;padding:10px 12px;font-weight:800;cursor:pointer}.ywb-row button.primary{background:#ffd000;color:#111}
-        #ywbFPBlockedLog{height:180px;overflow:auto;border:1px solid #403810;background:#101010;border-radius:6px;padding:8px;font:12px/1.45 Consolas,monospace}.ywb-log-row.success{color:#9ef59e}.ywb-log-row.error{color:#ff9e9e}.ywb-log-row.warning{color:#ffd86b}
-        @media(max-width:720px){#ywbFPBlockedManager{inset:12px;width:calc(100vw - 24px)}.ywb-grid{grid-template-columns:1fr}}
+        #ywbFPBlockedManager{position:fixed;inset:18px;z-index:2147483647;pointer-events:none;font:14px/1.45 "Segoe UI","Trebuchet MS",sans-serif;color:#f5f5f5}
+        #ywbFPBlockedManager *{box-sizing:border-box}
+        #ywbFPBlockedManager .ywb-shell{position:relative;width:min(680px,calc(100vw - 36px));max-height:calc(100vh - 36px);margin:0 auto;background:#1a1a1a;border:2px solid #ffc107;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.7);padding:18px;overflow:auto;pointer-events:auto}
+        .ywb-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}.ywb-title-row{display:inline-flex;align-items:center;gap:10px}.ywb-mark{width:34px;height:34px;display:block;flex:0 0 auto;filter:drop-shadow(0 6px 14px rgba(255,193,7,.18))}
+        .ywb-head h2{margin:0;color:#ffc107;font-size:22px;line-height:1.1;letter-spacing:.02em}.ywb-build{font-size:12px;font-weight:600;color:#aaa;vertical-align:middle;margin-left:4px}.ywb-byline{display:block;font-size:12px;color:#ffc107;text-decoration:none;opacity:.7;margin-top:2px}.ywb-byline:hover{opacity:1;text-decoration:underline}
+        .ywb-close{border:1px solid #ffc107;background:#2a2a2a;color:#ffc107;width:34px;height:34px;border-radius:6px;font-weight:900;cursor:pointer}.ywb-close:hover{background:#ffc107;color:#111}
+        .ywb-body{display:grid;gap:14px}.ywb-section{display:grid;gap:12px;border:1px solid #333;background:#202020;border-radius:8px;padding:12px}.ywb-section-title{margin:0;color:#ffc107;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+        .ywb-field{display:grid;gap:5px}.ywb-field span{color:#aaa;font-size:12px}.ywb-field input,.ywb-field select{width:100%;border:1px solid #555;border-radius:6px;background:#2a2a2a;color:#f5f5f5;padding:10px 12px;font-size:14px}.ywb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .ywb-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.ywb-row button,.ywb-file{border:1px solid #ffc107;background:#ffc107;color:#111;border-radius:6px;padding:10px 12px;font-weight:800;cursor:pointer}.ywb-row button.secondary,.ywb-file.secondary{background:#2a2a2a;color:#ffc107}.ywb-row button:hover:not(:disabled),.ywb-file:hover{filter:brightness(1.08)}
+        .ywb-note{color:#aaa;font-size:12px}#ywbFPBlockedLog{height:150px;overflow:auto;border:1px solid #444;background:#111;color:#ccc;border-radius:6px;padding:8px;font:11px/1.4 Consolas,"Courier New",monospace;white-space:pre-wrap}.ywb-log-row.success{color:#9ef59e}.ywb-log-row.error{color:#ff9e9e}.ywb-log-row.warning{color:#ffd86b}
+        @media(max-width:720px){#ywbFPBlockedManager{inset:10px}.ywb-shell{width:calc(100vw - 20px)}.ywb-grid{grid-template-columns:1fr}.ywb-row{flex-direction:column;align-items:stretch}.ywb-row button,.ywb-file{width:100%}}
       </style>
-      <div class="ywb-head"><div>FPBlockedManager <span style="font-weight:400">${Config.VERSION}</span></div><button class="ywb-close" title="Close">X</button></div>
-      <div class="ywb-body">
-        <label class="ywb-field"><span>User or page access token</span><input id="ywbFPBlockedToken" placeholder="uses page runtime token if empty"></label>
-        <div class="ywb-row"><button class="primary" id="ywbFPBlockedFetch">Fetch pages</button></div>
-        <div class="ywb-grid">
-          <label class="ywb-field"><span>Fetched page</span><select id="ywbFPBlockedPage"><option value="">Select fetched page</option></select></label>
-          <label class="ywb-field"><span>Manual page ID</span><input id="ywbFPBlockedManualPage" placeholder="optional"></label>
+      <div class="ywb-shell">
+        <div class="ywb-head">
+          <div>
+            <div class="ywb-title-row">${APP_MARK_SVG}<h2>${APP_TITLE} <span class="ywb-build">build ${escapeHtml(Config.VERSION)}</span></h2></div>
+            <a class="ywb-byline" href="https://yellowweb.top" target="_blank" rel="noopener">by Yellow Web</a>
+          </div>
+          <button class="ywb-close" title="Close">&#x2715;</button>
         </div>
-        <div class="ywb-row">
-          <button class="primary" id="ywbFPBlockedExport">Export blocked</button>
-          <label class="ywb-file">Load JSON<input id="ywbFPBlockedFile" type="file" accept=".json,application/json" hidden></label>
-          <button id="ywbFPBlockedImport">Import blocked</button>
+        <div class="ywb-body">
+          <section class="ywb-section">
+            <p class="ywb-section-title">Page</p>
+            <label class="ywb-field"><span>User or page access token</span><input id="ywbFPBlockedToken" placeholder="uses page runtime token if empty"></label>
+            <div class="ywb-row"><button class="primary" id="ywbFPBlockedFetch">Fetch pages</button></div>
+            <div class="ywb-grid">
+              <label class="ywb-field"><span>Fetched page</span><select id="ywbFPBlockedPage"><option value="">Select fetched page</option></select></label>
+              <label class="ywb-field"><span>Manual page ID</span><input id="ywbFPBlockedManualPage" placeholder="optional"></label>
+            </div>
+          </section>
+          <section class="ywb-section">
+            <p class="ywb-section-title">Export / import</p>
+            <div class="ywb-row">
+              <button class="primary" id="ywbFPBlockedExport">Export blocked</button>
+              <label class="ywb-file secondary">Import JSON<input id="ywbFPBlockedFile" type="file" accept=".json,application/json" hidden></label>
+              <button id="ywbFPBlockedImport">Import blocked</button>
+            </div>
+            <div id="ywbFPBlockedPackageInfo" class="ywb-note">No package loaded.</div>
+          </section>
+          <section class="ywb-section">
+            <p class="ywb-section-title">Manual user</p>
+            <div class="ywb-grid">
+              <label class="ywb-field"><span>User ID</span><input id="ywbFPBlockedUserId" placeholder="1000..."></label>
+              <div class="ywb-row" style="align-self:end"><button id="ywbFPBlockedOne">Block</button><button class="secondary" id="ywbFPUnblockedOne">Unblock</button></div>
+            </div>
+          </section>
+          <div id="ywbFPBlockedLog"></div>
         </div>
-        <div class="ywb-grid">
-          <label class="ywb-field"><span>User ID</span><input id="ywbFPBlockedUserId" placeholder="1000..."></label>
-          <div class="ywb-row" style="align-self:end"><button id="ywbFPBlockedOne">Block</button><button id="ywbFPUnblockedOne">Unblock</button></div>
-        </div>
-        <div id="ywbFPBlockedPackageInfo">No package loaded.</div>
-        <div id="ywbFPBlockedLog"></div>
       </div>`;
     document.body.appendChild(root);
     root.querySelector(".ywb-close").onclick = () => root.remove();
