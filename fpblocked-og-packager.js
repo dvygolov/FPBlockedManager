@@ -501,8 +501,6 @@ function main() {
       sha256: sha256Hex(source),
       byteLength: Buffer.byteLength(source, "utf8"),
     },
-    payloadUrl: publicUrl(`${build}/payload.js`),
-    latestPayloadUrl: publicUrl("latest/payload.js"),
     chunks: chunks.map((chunk, index) => ({
       index: index + 1,
       file: `og/chunk-${String(index + 1).padStart(3, "0")}.html`,
@@ -524,8 +522,6 @@ function main() {
     source: path.relative(ROOT, sourcePath).replace(/\\/g, "/"),
     chunkSize: CHUNK_SIZE,
     payloadFile: "payload.js",
-    payloadUrl: publicUrl(`${build}/payload.js`),
-    latestPayloadUrl: publicUrl("latest/payload.js"),
     manifestFile: "manifest.html",
     manifestUrl: publicUrl(`${build}/manifest.html`),
     latestManifestUrl: publicUrl("latest/manifest.html"),
@@ -537,6 +533,7 @@ function main() {
     version: build,
     generatedAt,
     payload: manifest.payload,
+    latestManifestUrl: packageInfo.latestManifestUrl,
     chunks: manifest.chunks.map((chunk) => ({
       index: chunk.index,
       latestUrl: chunk.url,

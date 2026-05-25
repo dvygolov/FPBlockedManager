@@ -1,6 +1,6 @@
 {
   "name": "fpblockedmanager",
-  "version": "250526b1",
+  "version": "250526b2",
   "private": true,
   "description": "Browser-side Facebook Page blocked users export and import tooling.",
   "scripts": {
