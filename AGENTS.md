@@ -13,7 +13,7 @@
 - After each production deploy, run Facebook Sharing Debugger scrape for:
   - `https://fpblocked.pages.dev/fpblocked/latest/manifest.html`
   - every `https://fpblocked.pages.dev/fpblocked/latest/og/chunk-*.html`
-- Perform release scrape through a Dolphin Anty profile logged into Facebook Ads Manager.
+- Perform release scrape through the currently logged-in Google Chrome profile.
 
 ## Hygiene
 
