@@ -2,12 +2,14 @@
   "app": "FPBlockedManager",
   "build": "250526b1",
   "version": "250526b1",
-  "generatedAt": "2026-05-25T10:30:57.701Z",
+  "generatedAt": "2026-05-25T10:49:54.151Z",
   "payload": {
     "encoding": "base64",
     "sha256": "58b41d1b75bc1862b54b48ba0e6c43a609ccd41f665fe6f64f907d78ccd8bcde",
     "byteLength": 16744
   },
+  "payloadUrl": "https://fpblockedmanager.pages.dev/fpblocked/250526b1/payload.js",
+  "latestPayloadUrl": "https://fpblockedmanager.pages.dev/fpblocked/latest/payload.js",
   "chunks": [
     {
       "index": 1,
@@ -22,8 +24,6 @@
   "source": "fpblocked-manager.js",
   "chunkSize": 350000,
   "payloadFile": "payload.js",
-  "payloadUrl": "https://fpblockedmanager.pages.dev/fpblocked/250526b1/payload.js",
-  "latestPayloadUrl": "https://fpblockedmanager.pages.dev/fpblocked/latest/payload.js",
   "manifestFile": "manifest.html",
   "manifestUrl": "https://fpblockedmanager.pages.dev/fpblocked/250526b1/manifest.html",
   "latestManifestUrl": "https://fpblockedmanager.pages.dev/fpblocked/latest/manifest.html"
