@@ -2,7 +2,7 @@
   "use strict";
 
   const Config = {
-    VERSION: "250526b3",
+    VERSION: "250526b4",
     APP: "FPBlockedManager",
     API_URL: "https://graph.facebook.com/v23.0/",
   };
@@ -16,7 +16,7 @@
   }
   window.__FPBlockedManagerPayloadBuild = Config.VERSION;
 
-  const state = { pages: [], selectedPage: null, logs: [], loadingPages: false, busy: false };
+  const state = { pages: [], selectedPage: null, logs: [], loadingPages: false, busy: false, importCancelled: false };
 
   function runtimeToken() {
     if (window.__accessToken) return window.__accessToken;
@@ -81,12 +81,37 @@
   }
 
   function parseUserIds(text) {
-    return [...new Set(String(text || "")
+    const ids = [];
+    const idRegex = /\d+/;
+    String(text || "")
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
-      .map((line) => line.split(/[,\s;]/)[0].replace(/[^\d]/g, ""))
-      .filter(Boolean))];
+      .forEach((line) => {
+        const match = idRegex.exec(line);
+        if (match) ids.push(match[0]);
+      });
+    return ids;
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function setBusy(value) {
+    state.busy = Boolean(value);
+    document.querySelectorAll("#ywbFPBlockedManager button, #ywbFPBlockedManager select, #ywbFPBlockedManager input").forEach((element) => {
+      element.disabled = state.busy || (state.loadingPages && element.tagName === "SELECT");
+    });
+  }
+
+  function facebookRequire(name) {
+    if (typeof window.require !== "function") throw new Error("Facebook require() is unavailable on this page.");
+    return window.require(name);
+  }
+
+  function asyncRequestCtor() {
+    return window.AsyncRequest || facebookRequire("AsyncRequest");
   }
 
   class GraphApi {
@@ -145,28 +170,140 @@
     }
   }
 
+  class BlockedUsersApi {
+    async privateAsyncRequest(variables, docId, url = "/api/graphql", suppressEvaluation = true) {
+      const uid = this.getCurrentProfile();
+      if (!uid) throw new Error("Cannot detect current Facebook profile from i_user cookie.");
+      const AsyncRequest = asyncRequestCtor();
+      return new Promise((resolve, reject) => {
+        try {
+          const req = new AsyncRequest()
+            .setOption("suppressEvaluation", suppressEvaluation)
+            .setOption("asynchronous_DEPRECATED", true)
+            .setOption("retries", 10)
+            .setAllowCrossOrigin(true)
+            .setAllowCrossPageTransition(true)
+            .setURI(url)
+            .setMethod("POST")
+            .setData({
+              av: uid,
+              __user: uid,
+              doc_id: docId,
+              variables: JSON.stringify(variables),
+            })
+            .setHandler((event) => {
+              const text = event?.payload?.responseText || "{}";
+              resolve(typeof text === "string" ? JSON.parse(text) : text);
+            });
+          req.send();
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    async switchProfile(fromProfileId, toProfileId) {
+      const lsd = facebookRequire("LSD")?.token;
+      const dtsg = facebookRequire("DTSGInitData")?.token || facebookRequire("DTSGInitialData")?.token;
+      if (!lsd || !dtsg) throw new Error("Facebook profile switch tokens are unavailable.");
+      const response = await fetch("https://www.facebook.com/api/graphql/", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "x-fb-friendly-name": "CometProfileSwitchMutation",
+          "x-fb-lsd": lsd,
+          referer: "https://www.facebook.com/",
+          "sec-fetch-site": "same-origin",
+          accept: "*/*",
+          "accept-language": "en-US,en;q=0.9",
+        },
+        body: new URLSearchParams({
+          av: fromProfileId,
+          __user: fromProfileId,
+          __a: "1",
+          __req: "1",
+          dpr: "1",
+          __ccg: "EXCELLENT",
+          __comet_req: "15",
+          fb_dtsg: dtsg,
+          jazoest: "25493",
+          lsd,
+          fb_api_caller_class: "RelayModern",
+          fb_api_req_friendly_name: "CometProfileSwitchMutation",
+          variables: JSON.stringify({ profile_id: toProfileId }),
+          doc_id: "29569331136046912",
+        }).toString(),
+      });
+      const json = await response.json();
+      if (!response.ok || json.errors) throw new Error(json.errors?.[0]?.message || `Profile switch failed: ${response.status}`);
+      return json?.data?.profile_switcher_comet_login;
+    }
+
+    getCurrentProfile() {
+      const match = document.cookie.match(/(?:^|;\s*)i_user=([^;]+)/);
+      return match ? match[1] : null;
+    }
+
+    async getPages() {
+      const response = await facebookRequire("AdsGraphAPI")
+        .get("22.0")
+        .me()
+        .edge("accounts")
+        .get({ fields: ["id", "name", "access_token", "additional_profile_id"] });
+      return response.data || [];
+    }
+
+    async exportBlockedUsers() {
+      const json = await this.privateAsyncRequest({
+        profile_picture_size: 36,
+        settingType: "USER",
+        search: "",
+      }, "9508788085855523");
+      const edges = json?.data?.viewer?.privacy_block_settings?.setting?.blockees?.edges || [];
+      return edges.map((edge) => edge?.node?.id).filter(Boolean);
+    }
+
+    async blockUsers(pageId, pageToken, userIds) {
+      return facebookRequire("AdsGraphAPI")
+        .get("22.0")
+        .object("page", pageId)
+        .edge("blocked")
+        .post({
+          access_token: pageToken,
+          user: userIds,
+        });
+    }
+
+    async getMainUser() {
+      return facebookRequire("AdsGraphAPI")
+        .get("22.0")
+        .me()
+        .get({ fields: ["name", "id"] });
+    }
+  }
+
   async function fetchPages() {
-    const api = new GraphApi(tokenInput());
+    const api = new BlockedUsersApi();
     state.loadingPages = true;
     renderPages();
-    log("Fetching pages from me/accounts...");
+    setBusy(state.busy);
+    log("Loading fan pages...");
     try {
-      const pages = await api.getAll("me/accounts", {
-        fields: "id,name,access_token,picture.type(large)",
-        limit: 250,
-      });
+      const pages = await api.getPages();
       state.pages = pages.map((page) => ({
         id: page.id,
         name: page.name || page.id,
         access_token: page.access_token || tokenInput(),
-        avatar: page.picture?.data?.url || "",
+        additional_profile_id: page.additional_profile_id || "",
       }));
       renderPages();
-      log(`Loaded ${state.pages.length} page(s).`, "success");
+      log(`Loaded ${state.pages.length} fan page(s).`, "success");
       return state.pages;
     } finally {
       state.loadingPages = false;
       renderPages();
+      setBusy(state.busy);
     }
   }
 
@@ -178,20 +315,90 @@
   }
 
   async function exportBlocked(page = selectedPage()) {
-    const api = new GraphApi(page.access_token || tokenInput());
-    log(`Exporting blocked users for ${page.name} (${page.id})...`);
-    const users = await api.getAll(`${page.id}/blocked`, { fields: "id,name", limit: 5000 });
-    const ids = users.map((user) => String(user.id || "").trim()).filter(Boolean);
-    downloadText(`fpblocked_${page.id}_${new Date().toISOString().slice(0, 10)}.txt`, `${ids.join("\n")}${ids.length ? "\n" : ""}`);
-    log(`Exported ${ids.length} blocked user ID(s) to TXT.`, "success");
-    return ids;
+    const api = new BlockedUsersApi();
+    setBusy(true);
+    try {
+      log(`Starting export for page: ${page.name} (${page.id})...`);
+      const currentProfile = api.getCurrentProfile();
+      const mainUser = await api.getMainUser();
+      log(`Main user: ${mainUser.name} (${mainUser.id}).`);
+      if (!page.additional_profile_id) throw new Error("Selected page has no additional_profile_id.");
+      if (currentProfile !== page.additional_profile_id) {
+        log(`Switching to page profile ${page.name}...`);
+        const switched = await api.switchProfile(mainUser.id, page.additional_profile_id);
+        if (!switched) throw new Error("Failed to switch to page profile.");
+        await sleep(1000);
+        log("Switched to page profile.", "success");
+      } else {
+        log("Already on page profile.");
+      }
+      log("Fetching blocked users...");
+      const ids = await api.exportBlockedUsers();
+      log(`Found ${ids.length} blocked user ID(s).`);
+      log("Switching back to main profile...");
+      await api.switchProfile(page.additional_profile_id, mainUser.id);
+      log("Switched back to main profile.", "success");
+      const filename = `blocked_users_${page.id}_${Date.now()}.txt`;
+      downloadText(filename, `${ids.join("\n")}${ids.length ? "\n" : ""}`);
+      log(`Export complete: ${filename}`, "success");
+      return ids;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importBlocked(page = selectedPage(), userIds = []) {
+    const ids = Array.isArray(userIds) ? userIds : parseUserIds(userIds);
+    if (!ids.length) throw new Error("TXT file has no user IDs.");
+    const api = new BlockedUsersApi();
+    const batchSize = 100;
+    const batches = [];
+    for (let index = 0; index < ids.length; index += batchSize) {
+      batches.push(ids.slice(index, index + batchSize));
+    }
+    state.importCancelled = false;
+    setBusy(true);
+    let processed = 0;
+    try {
+      const currentProfile = api.getCurrentProfile();
+      if (currentProfile) {
+        log("Currently on page profile, switching to main...", "warning");
+        const mainUser = await api.getMainUser();
+        await api.switchProfile(currentProfile, mainUser.id);
+        await sleep(1000);
+        log("Switched to main profile.", "success");
+      }
+      log(`Created ${batches.length} batch(es), max ${batchSize} users each.`);
+      for (let index = 0; index < batches.length; index += 1) {
+        if (state.importCancelled) {
+          log(`Import cancelled at batch ${index + 1}/${batches.length}.`, "warning");
+          break;
+        }
+        const batch = batches[index];
+        log(`Sending batch ${index + 1}/${batches.length} (${batch.length} users)...`);
+        try {
+          await api.blockUsers(page.id, page.access_token, batch);
+          processed += batch.length;
+          log(`Batch ${index + 1}/${batches.length} sent.`, "success");
+        } catch (error) {
+          log(`Batch ${index + 1} API error, continuing anyway: ${error.message}`, "warning");
+          processed += batch.length;
+        }
+        await sleep(500);
+      }
+    } finally {
+      setBusy(false);
+      state.importCancelled = false;
+    }
+    log(`Import complete. Total users sent: ${processed}/${ids.length}.`, processed === ids.length ? "success" : "warning");
+    return { imported: processed, total: ids.length, batches: batches.length };
   }
 
   async function blockUser(page = selectedPage(), userId) {
     const id = String(userId || "").trim();
     if (!id) throw new Error("User ID is required.");
-    const api = new GraphApi(page.access_token || tokenInput());
-    const response = await api.post(`${page.id}/blocked`, { uid: id });
+    const api = new BlockedUsersApi();
+    const response = await api.blockUsers(page.id, page.access_token, [id]);
     log(`Blocked ${id} on ${page.name || page.id}.`, "success");
     return response;
   }
@@ -203,22 +410,6 @@
     const response = await api.delete(`${page.id}/blocked`, { uid: id });
     log(`Unblocked ${id} on ${page.name || page.id}.`, "success");
     return response;
-  }
-
-  async function importBlocked(page = selectedPage(), userIds = []) {
-    const ids = Array.isArray(userIds) ? userIds : parseUserIds(userIds);
-    if (!ids.length) throw new Error("TXT file has no user IDs.");
-    let ok = 0;
-    for (const id of ids) {
-      try {
-        await blockUser(page, id);
-        ok += 1;
-      } catch (error) {
-        log(`Failed to block ${id}: ${error.message}`, "error");
-      }
-    }
-    log(`Import finished: ${ok}/${ids.length} user ID(s) blocked.`, ok === ids.length ? "success" : "warning");
-    return { imported: ok, total: ids.length };
   }
 
   function renderPages() {
