@@ -1,8 +1,8 @@
 {
   "name": "fpblockedmanager",
-  "version": "250526b2",
+  "version": "250526b3",
   "private": true,
-  "description": "Browser-side Facebook Page blocked users export and import tooling.",
+  "description": "Browser-side Facebook Page blocked user ID TXT export and import tooling.",
   "scripts": {
     "check": "node --check fpblocked-og-packager.js && node --check fpblocked-manager.js && node --check fpblocked-loader.js",
     "build": "node fpblocked-og-packager.js --base-url=https://fpblockedmanager.pages.dev/fpblocked",

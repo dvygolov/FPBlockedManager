@@ -2,10 +2,9 @@
   "use strict";
 
   const Config = {
-    VERSION: "250526b2",
+    VERSION: "250526b3",
     APP: "FPBlockedManager",
     API_URL: "https://graph.facebook.com/v23.0/",
-    CACHE_KEY: "fpblockedmanager.lastPackage.v1",
   };
   const APP_ID = "ywbFPBlockedManager";
   const APP_TITLE = "FP Blocked Manager";
@@ -17,7 +16,7 @@
   }
   window.__FPBlockedManagerPayloadBuild = Config.VERSION;
 
-  const state = { pages: [], selectedPage: null, package: null, logs: [], loadingPages: false };
+  const state = { pages: [], selectedPage: null, logs: [], loadingPages: false, busy: false };
 
   function runtimeToken() {
     if (window.__accessToken) return window.__accessToken;
@@ -61,8 +60,8 @@
     (type === "error" ? console.error : console.log)(`[${Config.APP}] ${message}`);
   }
 
-  function downloadJson(fileName, data) {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  function downloadText(fileName, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
     a.download = fileName;
@@ -72,15 +71,22 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function readJsonFile(file) {
+  function readTextFile(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => {
-        try { resolve(JSON.parse(reader.result)); } catch (error) { reject(error); }
-      };
+      reader.onload = () => resolve(String(reader.result || ""));
       reader.onerror = () => reject(new Error("Cannot read selected file."));
       reader.readAsText(file);
     });
+  }
+
+  function parseUserIds(text) {
+    return [...new Set(String(text || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => line.split(/[,\s;]/)[0].replace(/[^\d]/g, ""))
+      .filter(Boolean))];
   }
 
   class GraphApi {
@@ -175,19 +181,10 @@
     const api = new GraphApi(page.access_token || tokenInput());
     log(`Exporting blocked users for ${page.name} (${page.id})...`);
     const users = await api.getAll(`${page.id}/blocked`, { fields: "id,name", limit: 5000 });
-    const pack = {
-      app: Config.APP,
-      version: Config.VERSION,
-      exportedAt: new Date().toISOString(),
-      page: { id: page.id, name: page.name || page.id },
-      users: users.map((user) => ({ id: user.id, name: user.name || "" })).filter((user) => user.id),
-    };
-    state.package = pack;
-    localStorage.setItem(Config.CACHE_KEY, JSON.stringify(pack));
-    downloadJson(`fpblocked_${page.id}_${new Date().toISOString().slice(0, 10)}.json`, pack);
-    updatePackageInfo();
-    log(`Exported ${pack.users.length} blocked user(s).`, "success");
-    return pack;
+    const ids = users.map((user) => String(user.id || "").trim()).filter(Boolean);
+    downloadText(`fpblocked_${page.id}_${new Date().toISOString().slice(0, 10)}.txt`, `${ids.join("\n")}${ids.length ? "\n" : ""}`);
+    log(`Exported ${ids.length} blocked user ID(s) to TXT.`, "success");
+    return ids;
   }
 
   async function blockUser(page = selectedPage(), userId) {
@@ -208,26 +205,20 @@
     return response;
   }
 
-  async function importBlocked(page = selectedPage(), pack = state.package) {
-    if (!pack?.users?.length) throw new Error("Import package has no users.");
+  async function importBlocked(page = selectedPage(), userIds = []) {
+    const ids = Array.isArray(userIds) ? userIds : parseUserIds(userIds);
+    if (!ids.length) throw new Error("TXT file has no user IDs.");
     let ok = 0;
-    for (const user of pack.users) {
+    for (const id of ids) {
       try {
-        await blockUser(page, user.id);
+        await blockUser(page, id);
         ok += 1;
       } catch (error) {
-        log(`Failed to block ${user.id}${user.name ? ` (${user.name})` : ""}: ${error.message}`, "error");
+        log(`Failed to block ${id}: ${error.message}`, "error");
       }
     }
-    log(`Import finished: ${ok}/${pack.users.length} user(s) blocked.`, ok === pack.users.length ? "success" : "warning");
-    return { imported: ok, total: pack.users.length };
-  }
-
-  function updatePackageInfo() {
-    const el = document.querySelector("#ywbFPBlockedPackageInfo");
-    if (!el) return;
-    const pack = state.package;
-    el.textContent = pack ? `${pack.users?.length || 0} user(s) loaded from ${pack.page?.name || pack.page?.id || "package"}` : "No package loaded.";
+    log(`Import finished: ${ok}/${ids.length} user ID(s) blocked.`, ok === ids.length ? "success" : "warning");
+    return { imported: ok, total: ids.length };
   }
 
   function renderPages() {
@@ -248,11 +239,10 @@
       .join("");
   }
 
-  async function loadImportPackage(file) {
-    state.package = await readJsonFile(file);
-    localStorage.setItem(Config.CACHE_KEY, JSON.stringify(state.package));
-    updatePackageInfo();
-    log(`Loaded package from ${file.name}.`, "success");
+  async function importBlockedTxt(file) {
+    const ids = parseUserIds(await readTextFile(file));
+    log(`Loaded ${ids.length} user ID(s) from ${file.name}.`);
+    return importBlocked(selectedPage(), ids);
   }
 
   function createUi() {
@@ -290,10 +280,9 @@
             <p class="ywb-section-title">Blocked users</p>
             <div class="ywb-row">
               <button class="primary" id="ywbFPBlockedExport">Export blocked</button>
-              <label class="ywb-file secondary">Import JSON<input id="ywbFPBlockedFile" type="file" accept=".json,application/json" hidden></label>
-              <button id="ywbFPBlockedImport">Import blocked</button>
+              <label class="ywb-file secondary">Import TXT<input id="ywbFPBlockedFile" type="file" accept=".txt,text/plain" hidden></label>
             </div>
-            <div id="ywbFPBlockedPackageInfo" class="ywb-note">No package loaded.</div>
+            <div class="ywb-note">TXT format: one Facebook user ID per line.</div>
           </section>
           <div id="ywbFPBlockedLog"></div>
         </div>
@@ -301,25 +290,17 @@
     document.body.appendChild(root);
     root.querySelector(".ywb-close").onclick = () => root.remove();
     root.querySelector("#ywbFPBlockedExport").onclick = () => exportBlocked().catch((error) => log(error.message, "error"));
-    root.querySelector("#ywbFPBlockedImport").onclick = () => importBlocked().catch((error) => log(error.message, "error"));
     root.querySelector("#ywbFPBlockedFile").onchange = async (event) => {
       const file = event.target.files?.[0];
       if (!file) return;
       try {
-        await loadImportPackage(file);
+        await importBlockedTxt(file);
       } catch (error) {
-        log(`Cannot load package: ${error.message}`, "error");
+        log(`Cannot import TXT: ${error.message}`, "error");
       } finally {
         event.target.value = "";
       }
     };
-    try {
-      const cached = JSON.parse(localStorage.getItem(Config.CACHE_KEY) || "null");
-      if (cached?.users) state.package = cached;
-    } catch (error) {
-      // Ignore malformed cache.
-    }
-    updatePackageInfo();
     log("Ready.");
     fetchPages().catch((error) => log(error.message, "error"));
   }
@@ -331,9 +312,10 @@
     fetchPages,
     exportBlocked,
     importBlocked,
+    importBlockedTxt,
     blockUser,
     unblockUser,
-    debug: { runtimeToken },
+    debug: { runtimeToken, parseUserIds },
   };
 
   createUi();
