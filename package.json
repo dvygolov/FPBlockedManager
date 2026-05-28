@@ -1,9 +1,11 @@
 {
   "name": "fpblockedmanager",
-  "version": "250526b4",
+  "version": "280526b1",
   "private": true,
   "description": "Browser-side Facebook Page blocked user ID TXT export and import tooling.",
   "scripts": {
+    "bump:build": "node scripts/bump-build-version.cjs",
+    "prebuild": "npm run bump:build",
     "check": "node --check fpblocked-og-packager.js && node --check fpblocked-manager.js && node --check fpblocked-loader.js",
     "build": "node fpblocked-og-packager.js --base-url=https://fpblockedmanager.pages.dev/fpblocked",
     "deploy": "npx wrangler pages deploy ./dist --project-name=fpblockedmanager --branch=main --commit-dirty=true"
