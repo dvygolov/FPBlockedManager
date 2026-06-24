@@ -1,6 +1,6 @@
 {
   "name": "fpblockedmanager",
-  "version": "240626b2",
+  "version": "240626b3",
   "private": true,
   "description": "Browser-side Facebook Page blocked user ID TXT export and import tooling.",
   "scripts": {
